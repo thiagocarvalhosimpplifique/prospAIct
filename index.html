@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProspAIct</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f1117;--bg2:#181c27;--bg3:#1e2333;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);--text:#e8eaf0;--muted:#7a7f96;--accent:#3ecf8e;--accent2:#7c6af7;--hot:#f56565;--warm:#ed9c3d;--cold:#7a7f96;--new:#3ecf8e;--radius:10px;--font:'DM Sans',sans-serif;--mono:'DM Mono',monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+.app{display:grid;grid-template-rows:52px 1fr;height:100vh;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.logo{font-size:15px;font-weight:500;letter-spacing:-.3px;color:var(--text)}
+.logo em{font-style:normal;color:var(--accent)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.main{display:grid;grid-template-columns:240px 1fr;overflow:hidden}
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:18px}
+.sidebar-label{font-size:10px;font-weight:500;letter-spacing:.8px;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px}
+.stat .n{font-size:22px;font-weight:300;line-height:1}
+.stat .l{font-size:11px;color:var(--muted);margin-top:3px}
+.tag-group{display:flex;flex-wrap:wrap;gap:5px}
+.tag{padding:4px 10px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--border);color:var(--muted);transition:all .15s}
+.tag:hover,.tag.on{border-color:var(--accent);color:var(--accent);background:rgba(62,207,142,.08)}
+.sidebar input,.sidebar select{width:100%;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:var(--font);outline:none;transition:border .15s}
+.sidebar input:focus,.sidebar select:focus{border-color:var(--accent)}
+.sidebar select option{background:var(--bg3)}
+.score-val{font-size:12px;color:var(--muted);margin-top:4px}
+input[type=range]{accent-color:var(--accent);width:100%}
+.wh-box input{font-family:var(--mono);font-size:11px}
+.wh-status{display:flex;align-items:center;gap:6px;font-size:12px;padding:6px 10px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .2s;white-space:nowrap}
+.wh-status .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);transition:all .2s}
+.wh-status.on{border-color:var(--accent);color:var(--accent)}
+.wh-status.on .dot{background:var(--accent);box-shadow:0 0 0 3px rgba(62,207,142,.2)}
+.content{display:flex;flex-direction:column;overflow:hidden}
+.toolbar{padding:10px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.search{flex:1;padding:7px 12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:var(--font);outline:none;transition:border .15s}
+.search:focus{border-color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:1px solid var(--border);background:transparent;color:var(--text);font-size:13px;font-family:var(--font);cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn:hover{border-color:var(--border2);background:var(--bg3)}
+.btn.accent{background:var(--accent);border-color:var(--accent);color:#0f1117;font-weight:500}
+.btn.accent:hover{background:#34c47e}
+.table-wrap{flex:1;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--bg2);padding:10px 14px;text-align:left;font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:2}
+tbody tr{border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+tbody tr:hover{background:var(--bg2)}
+tbody td{padding:11px 14px;vertical-align:middle}
+.company-cell{display:flex;align-items:center;gap:10px}
+.avatar{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0;font-family:var(--mono)}
+.co-name{font-weight:500;font-size:13px}
+.co-site{font-size:11px;color:var(--muted)}
+.badge{display:inline-flex;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.b-hot{background:rgba(245,101,101,.15);color:#f56565}
+.b-warm{background:rgba(237,156,61,.15);color:#ed9c3d}
+.b-cold{background:rgba(122,127,150,.12);color:var(--muted)}
+.b-new{background:rgba(62,207,142,.12);color:var(--accent)}
+.b-seg{background:rgba(124,106,247,.15);color:#a598ff}
+.score-bar{display:flex;align-items:center;gap:8px}
+.s-track{flex:1;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;min-width:50px}
+.s-fill{height:100%;border-radius:2px;transition:width .5s}
+.enrich-btn{padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font);transition:all .15s}
+.enrich-btn:hover{border-color:var(--accent);color:var(--accent)}
+.enrich-btn.done{border-color:rgba(62,207,142,.3);color:var(--accent);background:rgba(62,207,142,.08)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:500px;max-width:95vw;max-height:85vh;overflow-y:auto;padding:24px}
+.modal-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--muted);font-size:20px;padding:0;transition:color .15s}
+.modal-close:hover{color:var(--text)}
+.d-row{display:grid;grid-template-columns:110px 1fr;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);align-items:start}
+.d-row:last-child{border:none}
+.d-lbl{font-size:12px;color:var(--muted)}
+.d-val{font-size:13px}
+.d-val a{color:var(--accent);text-decoration:none}
+.insight-box{background:rgba(62,207,142,.06);border:1px solid rgba(62,207,142,.2);border-radius:var(--radius);padding:12px;font-size:13px;color:#a8f0d0;line-height:1.65;margin-top:12px}
+.insight-lbl{font-size:10px;font-weight:500;letter-spacing:.5px;color:var(--accent);margin-bottom:6px;text-transform:uppercase}
+.mtabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px}
+.mtab{padding:8px 16px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);transition:all .15s}
+.mtab.on{border-bottom-color:var(--accent);color:var(--accent)}
+.mpanel{display:none}.mpanel.on{display:block}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 16px;font-size:13px;z-index:200;transform:translateY(20px);opacity:0;transition:all .25s;pointer-events:none;max-width:320px}
+.toast.show{transform:translateY(0);opacity:1}
+.empty{text-align:center;padding:80px 20px;color:var(--muted)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.fadein{animation:fadeIn .3s ease forwards}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="logo">Prosp<em>AI</em>ct</div>
+    <div class="topbar-right">
+      <div class="wh-status" id="whStatus" onclick="toggleWebhook()">
+        <span class="dot"></span>
+        <span id="whLabel">Webhook inativo</span>
+      </div>
+      <button class="btn" onclick="openExport()">↓ Exportar</button>
+      <button class="btn accent" onclick="simulate()">+ Simular lead</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="sidebar">
+      <div>
+        <div class="sidebar-label">Métricas</div>
+        <div class="stat-grid">
+          <div class="stat"><div class="n" id="sTotal">0</div><div class="l">Total</div></div>
+          <div class="stat"><div class="n" id="sHot" style="color:var(--hot)">0</div><div class="l">Quentes</div></div>
+          <div class="stat"><div class="n" id="sEnr" style="color:var(--accent)">0</div><div class="l">Enriquecidos</div></div>
+          <div class="stat"><div class="n" id="sToday" style="color:var(--accent2)">0</div><div class="l">Hoje</div></div>
+        </div>
+      </div>
+      <div>
+        <div class="sidebar-label">Status</div>
+        <div class="tag-group">
+          <span class="tag on" data-f="all" onclick="setFilter(this)">Todos</span>
+          <span class="tag" data-f="hot" onclick="setFilter(this)">Quente</span>
+          <span class="tag" data-f="warm" onclick="setFilter(this)">Morno</span>
+          <span class="tag" data-f="new" onclick="setFilter(this)">Novo</span>
+          <span class="tag" data-f="cold" onclick="setFilter(this)">Frio</span>
+        </div>
+      </div>
+      <div>
+        <div class="sidebar-label">Segmento</div>
+        <select id="fSeg" onchange="render()">
+          <option value="">Todos</option>
+          <option>SaaS</option><option>E-commerce</option><option>Fintech</option>
+          <option>Saúde</option><option>Educação</option><option>Alimentação</option>
+          <option>Logística</option><option>Beleza</option><option>Serviços</option>
+        </select>
+      </div>
+      <div>
+        <div class="sidebar-label">Cidade</div>
+        <input type="text" id="fCity" placeholder="Ex: São Paulo" oninput="render()">
+      </div>
+      <div>
+        <div class="sidebar-label">Score mínimo</div>
+        <input type="range" id="fScore" min="0" max="100" value="0" oninput="document.getElementById('fScoreVal').textContent=this.value+'%';render()">
+        <div class="score-val" id="fScoreVal">0%</div>
+      </div>
+      <div>
+        <div class="sidebar-label">Webhook URL</div>
+        <input type="text" id="whUrl" value="https://seu-n8n.railway.app/webhook/leads" style="font-family:var(--mono);font-size:11px">
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5">Cole a URL do n8n. Clique no status acima para ativar.</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="toolbar">
+        <input class="search" type="text" id="fSearch" placeholder="Buscar empresa, contato, email, cidade..." oninput="render()">
+        <button class="btn" onclick="enrichAll()">✦ Enriquecer todos</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Empresa</th><th>Segmento</th><th>Decisor</th>
+              <th>Email</th><th>Cidade</th><th>Score</th><th>Status</th><th>IA</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div id="empty" class="empty" style="display:none">
+          <div style="font-size:32px;opacity:.3;margin-bottom:12px">○</div>
+          <div>Nenhum lead encontrado</div>
+          <div style="font-size:12px;margin-top:4px">Ajuste os filtros ou aguarde novos leads via webhook</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALHE -->
+<div class="overlay" id="overlay" onclick="closeModal(event)">
+  <div class="modal" id="modalBox"></div>
+</div>
+
+<!-- MODAL EXPORT -->
+<div class="overlay" id="exportOverlay" onclick="closeExport(event)">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-head">
+      <div style="font-size:15px;font-weight:500">Exportar lista</div>
+      <button class="modal-close" onclick="document.getElementById('exportOverlay').classList.remove('open')">×</button>
+    </div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Exporta os leads filtrados atualmente.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn accent" onclick="exportCSV()">↓ CSV</button>
+      <button class="btn" onclick="exportJSON()">↓ JSON</button>
+      <button class="btn" onclick="copyPayload()">⎘ Copiar payload</button>
+    </div>
+    <pre id="payPrev" style="margin-top:16px;background:var(--bg3);border:1px solid var(--border);padding:12px;border-radius:var(--radius);font-size:11px;font-family:var(--mono);overflow:auto;max-height:180px;color:var(--muted)"></pre>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const COLORS=[['#1e3a5f','#5ba4f5'],['#1e3a2f','#3ecf8e'],['#3a1e3a','#c084fc'],['#3a2a1e','#fb923c'],['#1e3040','#67e8f9'],['#2d1e3a','#f0abfc']];
+const SEGS=['SaaS','E-commerce','Fintech','Saúde','Educação','Alimentação','Logística','Beleza','Serviços'];
+const CITIES=['São Paulo','Campinas','Santo André','São Bernardo','Guarulhos','Curitiba','Florianópolis','Porto Alegre'];
+const CARGOS=['CEO','CMO','CTO','Diretor Comercial','Head de Marketing','Gerente de Vendas','Sócio-fundador'];
+const CONTACTS=['Ana Lima','Carlos Souza','Beatriz Faria','João Mendes','Fernanda Costa','Ricardo Alves','Patrícia Nunes','Lucas Brito','Mariana Santos','Diego Rocha'];
+const COMPANIES=['NovaTech','Ágil Log','DataFlow','MedLink','EduSpark','Sabor & Arte','QuickFreight','BeautyPro','ConnectServ','FinanceX','RotinaSaúde','OfertaHub'];
+const SITES=['novatech.com.br','agillog.com','dataflow.io','medlink.health','eduspark.com.br','saborarte.com.br','quickfreight.com','beautypro.com.br','connectserv.io','financex.com.br','routinefit.io','ofertahub.com'];
+const STATUSES=['hot','warm','cold','new'];
+
+let leads=[],filtered=[],whActive=false,whInterval=null,activeFilter='all';
+
+function rnd(a){return a[Math.floor(Math.random()*a.length)]}
+function rndInt(a,b){return Math.floor(Math.random()*(b-a+1))+a}
+function initials(n){return n.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase()}
+function avColor(n){return COLORS[n.charCodeAt(0)%COLORS.length]}
+
+function makeLead(){
+  const i=rndInt(0,COMPANIES.length-1);
+  const contact=rnd(CONTACTS),cargo=rnd(CARGOS),seg=rnd(SEGS),city=rnd(CITIES),st=rnd(STATUSES);
+  const score=rndInt(22,95);
+  const email=contact.toLowerCase().replace(/ /g,'.')+`@${SITES[i].split('.')[0]}.com.br`;
+  return{id:Date.now()+Math.random(),company:COMPANIES[i],site:SITES[i],segment:seg,contact,cargo,email,phone:`+55 11 9${rndInt(1000,9999)}-${rndInt(1000,9999)}`,linkedin:`linkedin.com/in/${contact.toLowerCase().replace(/ /,'-')}`,city,score,status:st,enriched:false,insight:'',ts:new Date()};
+}
+
+function scoreColor(s){return s>=75?'var(--hot)':s>=55?'var(--warm)':'var(--muted)'}
+function statusBadge(s){const m={hot:['b-hot','Quente'],warm:['b-warm','Morno'],cold:['b-cold','Frio'],new:['b-new','Novo']};return`<span class="badge ${m[s][0]}">${m[s][1]}</span>`}
+
+function render(){
+  const search=document.getElementById('fSearch').value.toLowerCase();
+  const seg=document.getElementById('fSeg').value;
+  const city=document.getElementById('fCity').value.toLowerCase();
+  const score=+document.getElementById('fScore').value;
+  filtered=leads.filter(l=>{
+    if(activeFilter!=='all'&&l.status!==activeFilter)return false;
+    if(seg&&l.segment!==seg)return false;
+    if(city&&!l.city.toLowerCase().includes(city))return false;
+    if(l.score<score)return false;
+    if(search&&!(l.company+l.contact+l.email+l.city).toLowerCase().includes(search))return false;
+    return true;
+  });
+  const tbody=document.getElementById('tbody');
+  const empty=document.getElementById('empty');
+  if(!filtered.length){tbody.innerHTML='';empty.style.display='block';updateStats();return;}
+  empty.style.display='none';
+  tbody.innerHTML=filtered.map(l=>{
+    const av=avColor(l.company);
+    const eb=l.enriched?`<button class="enrich-btn done">✓ ok</button>`:`<button class="enrich-btn" onclick="enrichOne('${l.id}',event)">✦ IA</button>`;
+    return`<tr class="fadein" onclick="openDetail('${l.id}')">
+      <td><div class="company-cell"><div class="avatar" style="background:${av[0]};color:${av[1]}">${initials(l.company)}</div><div><div class="co-name">${l.company}</div><div class="co-site">${l.site}</div></div></div></td>
+      <td><span class="badge b-seg">${l.segment}</span></td>
+      <td><div style="font-size:13px">${l.contact||'—'}</div><div style="font-size:11px;color:var(--muted)">${l.cargo||''}</div></td>
+      <td style="font-size:12px;color:var(--muted);font-family:var(--mono)">${l.email||'—'}</td>
+      <td>${l.city}</td>
+      <td><div class="score-bar"><div class="s-track"><div class="s-fill" style="width:${l.score}%;background:${scoreColor(l.score)}"></div></div><span style="font-size:12px;min-width:30px;color:${scoreColor(l.score)}">${l.score}%</span></div></td>
+      <td>${statusBadge(l.status)}</td>
+      <td>${eb}</td>
+    </tr>`;
+  }).join('');
+  updateStats();
+}
+
+function updateStats(){
+  document.getElementById('sTotal').textContent=leads.length;
+  document.getElementById('sHot').textContent=leads.filter(l=>l.status==='hot').length;
+  document.getElementById('sEnr').textContent=leads.filter(l=>l.enriched).length;
+  const t=new Date();t.setHours(0,0,0,0);
+  document.getElementById('sToday').textContent=leads.filter(l=>new Date(l.ts)>=t).length;
+}
+
+function setFilter(el){
+  document.querySelectorAll('.tag').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');activeFilter=el.dataset.f;render();
+}
+
+function enrichOne(id,evt){
+  if(evt)evt.stopPropagation();
+  const l=leads.find(x=>String(x.id)===String(id));
+  if(!l)return;
+  l.enriched=true;
+  l.insight=`${l.contact} é ${l.cargo} na ${l.company} (${l.segment}). Score ${l.score}% — ${l.score>=70?'abordagem direta por email + LinkedIn recomendada':'nutrir com conteúdo antes do primeiro contato'}.`;
+  render();toast(`Lead ${l.company} enriquecido`);
+}
+
+function enrichAll(){
+  leads.forEach(l=>{if(!l.enriched){l.enriched=true;l.insight=`Lead ${l.segment}, score ${l.score}%.`;}});
+  render();toast('Todos os leads enriquecidos');
+}
+
+function openDetail(id){
+  const l=leads.find(x=>String(x.id)===String(id));if(!l)return;
+  const av=avColor(l.company);
+  document.getElementById('modalBox').innerHTML=`
+    <div class="modal-head">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="avatar" style="width:42px;height:42px;border-radius:10px;background:${av[0]};color:${av[1]};font-size:13px">${initials(l.company)}</div>
+        <div><div style="font-size:15px;font-weight:500">${l.company}</div><div style="font-size:12px;color:var(--muted)">${l.site}</div></div>
+      </div>
+      <button class="modal-close" onclick="document.getElementById('overlay').classList.remove('open')">×</button>
+    </div>
+    <div class="mtabs">
+      <div class="mtab on" onclick="mtab(this,'mi')">Empresa</div>
+      <div class="mtab" onclick="mtab(this,'mc')">Decisor</div>
+      ${l.enriched?`<div class="mtab" onclick="mtab(this,'ma')">Insight IA</div>`:''}
+    </div>
+    <div id="mi" class="mpanel on">
+      <div class="d-row"><div class="d-lbl">Segmento</div><div class="d-val"><span class="badge b-seg">${l.segment}</span></div></div>
+      <div class="d-row"><div class="d-lbl">Cidade</div><div class="d-val">${l.city}</div></div>
+      <div class="d-row"><div class="d-lbl">Site</div><div class="d-val"><a href="https://${l.site}" target="_blank">${l.site}</a></div></div>
+      <div class="d-row"><div class="d-lbl">Score</div><div class="d-val" style="color:${scoreColor(l.score)};font-weight:500">${l.score}%</div></div>
+      <div class="d-row"><div class="d-lbl">Status</div><div class="d-val">${statusBadge(l.status)}</div></div>
+      <div class="d-row"><div class="d-lbl">Capturado</div><div class="d-val">${new Date(l.ts).toLocaleString('pt-BR')}</div></div>
+    </div>
+    <div id="mc" class="mpanel">
+      <div class="d-row"><div class="d-lbl">Nome</div><div class="d-val">${l.contact||'—'}</div></div>
+      <div class="d-row"><div class="d-lbl">Cargo</div><div class="d-val">${l.cargo||'—'}</div></div>
+      <div class="d-row"><div class="d-lbl">Email</div><div class="d-val"><a href="mailto:${l.email}" style="font-family:var(--mono);font-size:12px">${l.email||'—'}</a></div></div>
+      <div class="d-row"><div class="d-lbl">Telefone</div><div class="d-val">${l.phone||'—'}</div></div>
+      <div class="d-row"><div class="d-lbl">LinkedIn</div><div class="d-val"><a href="https://${l.linkedin}" target="_blank" style="font-size:12px">${l.linkedin||'—'}</a></div></div>
+    </div>
+    ${l.enriched?`<div id="ma" class="mpanel"><div class="insight-box"><div class="insight-lbl">Análise IA</div>${l.insight}</div></div>`:''}
+    <div style="margin-top:20px;display:flex;gap:8px">
+      ${!l.enriched?`<button class="btn accent" onclick="enrichOne('${l.id}',null);document.getElementById('overlay').classList.remove('open')">✦ Enriquecer</button>`:''}
+      <button class="btn" onclick="document.getElementById('overlay').classList.remove('open')">Fechar</button>
+    </div>`;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function mtab(el,id){
+  el.closest('.modal').querySelectorAll('.mtab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  ['mi','mc','ma'].forEach(p=>{const e=document.getElementById(p);if(e)e.classList.remove('on');});
+  const t=document.getElementById(id);if(t)t.classList.add('on');
+}
+
+function closeModal(e){if(e.target===document.getElementById('overlay'))document.getElementById('overlay').classList.remove('open');}
+function closeExport(e){if(e.target===document.getElementById('exportOverlay'))document.getElementById('exportOverlay').classList.remove('open');}
+
+function toggleWebhook(){
+  whActive=!whActive;
+  const el=document.getElementById('whStatus'),lbl=document.getElementById('whLabel');
+  if(whActive){
+    el.classList.add('on');lbl.textContent='Webhook ativo';
+    whInterval=setInterval(()=>{if(Math.random()>.5)addLead(makeLead(),true);},4500);
+  }else{
+    el.classList.remove('on');lbl.textContent='Webhook inativo';
+    clearInterval(whInterval);
+  }
+}
+
+function addLead(l,silent=false){leads.unshift(l);render();if(!silent)toast(`Novo lead: ${l.company}`);}
+function simulate(){const l=makeLead();addLead(l);toast(`Lead simulado: ${l.company}`);}
+
+function openExport(){
+  const prev=filtered.slice(0,3).map(l=>({empresa:l.company,segmento:l.segment,contato:l.contact,email:l.email,score:l.score,status:l.status}));
+  document.getElementById('payPrev').textContent=JSON.stringify(prev,null,2)+(filtered.length>3?'\n...':'');
+  document.getElementById('exportOverlay').classList.add('open');
+}
+
+function exportCSV(){
+  const h=['Empresa','Site','Segmento','Contato','Cargo','Email','Telefone','LinkedIn','Cidade','Score','Status','Insight'];
+  const rows=filtered.map(l=>[l.company,l.site,l.segment,l.contact,l.cargo,l.email,l.phone,l.linkedin,l.city,l.score,l.status,`"${(l.insight||'').replace(/"/g,"'")}"`].join(','));
+  const csv=[h.join(','),...rows].join('\n');
+  dl(csv,'text/csv',`leads_${new Date().toISOString().split('T')[0]}.csv`);
+  toast('CSV exportado!');
+}
+
+function exportJSON(){
+  dl(JSON.stringify(filtered.map(l=>({empresa:l.company,site:l.site,segmento:l.segment,contato:l.contact,cargo:l.cargo,email:l.email,telefone:l.phone,linkedin:l.linkedin,cidade:l.city,score:l.score,status:l.status,insight:l.insight})),null,2),'application/json',`leads_${new Date().toISOString().split('T')[0]}.json`);
+  toast('JSON exportado!');
+}
+
+function copyPayload(){
+  navigator.clipboard.writeText(document.getElementById('payPrev').textContent).then(()=>toast('Copiado!'));
+}
+
+function dl(content,type,name){
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+window.addEventListener('message',e=>{
+  if(e.data?.type==='lead')addLead({...makeLead(),...e.data.payload,id:Date.now()+Math.random(),ts:new Date(),enriched:false,insight:''});
+});
+
+for(let i=0;i<10;i++)leads.push(makeLead());
+render();
+</script>
+</body>
+</html>
