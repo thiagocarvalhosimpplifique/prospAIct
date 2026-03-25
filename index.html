@@ -17,7 +17,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid var(--border);background:var(--bg2)}
 .logo{font-size:15px;font-weight:500;letter-spacing:-.3px;color:var(--text)}
 .logo em{font-style:normal;color:var(--accent)}
-.topbar-right{display:flex;align-items:center;gap:10px}
+.topbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .main{display:grid;grid-template-columns:240px 1fr;overflow:hidden}
 .sidebar{background:var(--bg2);border-right:1px solid var(--border);padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:18px}
 .sidebar-label{font-size:10px;font-weight:500;letter-spacing:.8px;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
@@ -39,13 +39,15 @@ input[type=range]{accent-color:var(--accent);width:100%}
 .wh-status.on{border-color:var(--accent);color:var(--accent)}
 .wh-status.on .dot{background:var(--accent);box-shadow:0 0 0 3px rgba(62,207,142,.2)}
 .content{display:flex;flex-direction:column;overflow:hidden}
-.toolbar{padding:10px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);background:var(--bg2)}
-.search{flex:1;padding:7px 12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:var(--font);outline:none;transition:border .15s}
+.toolbar{padding:10px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);background:var(--bg2);flex-wrap:wrap}
+.search{flex:1;padding:7px 12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:var(--font);outline:none;transition:border .15s;min-width:200px}
 .search:focus{border-color:var(--accent)}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:1px solid var(--border);background:transparent;color:var(--text);font-size:13px;font-family:var(--font);cursor:pointer;transition:all .15s;white-space:nowrap}
 .btn:hover{border-color:var(--border2);background:var(--bg3)}
 .btn.accent{background:var(--accent);border-color:var(--accent);color:#0f1117;font-weight:500}
 .btn.accent:hover{background:#34c47e}
+.btn.secondary{background:var(--accent2);border-color:var(--accent2);color:#fff;font-weight:500}
+.btn.secondary:hover{background:#6b5ce7}
 .table-wrap{flex:1;overflow:auto}
 table{width:100%;border-collapse:collapse;font-size:13px}
 thead th{background:var(--bg2);padding:10px 14px;text-align:left;font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:2}
@@ -88,6 +90,15 @@ tbody td{padding:11px 14px;vertical-align:middle}
 .toast{position:fixed;bottom:20px;right:20px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 16px;font-size:13px;z-index:200;transform:translateY(20px);opacity:0;transition:all .25s;pointer-events:none;max-width:320px}
 .toast.show{transform:translateY(0);opacity:1}
 .empty{text-align:center;padding:80px 20px;color:var(--muted)}
+.import-area{border:2px dashed var(--border2);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:16px}
+.import-area:hover{border-color:var(--accent);background:rgba(62,207,142,.05)}
+.import-area.drag{border-color:var(--accent);background:rgba(62,207,142,.1)}
+.file-input{display:none}
+.import-stats{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-top:12px;font-size:12px}
+.import-stats div{padding:4px 0}
+.import-stats .success{color:var(--accent)}
+.import-stats .warning{color:var(--warm)}
+.import-stats .error{color:var(--hot)}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .fadein{animation:fadeIn .3s ease forwards}
 </style>
@@ -101,6 +112,8 @@ tbody td{padding:11px 14px;vertical-align:middle}
         <span class="dot"></span>
         <span id="whLabel">Webhook inativo</span>
       </div>
+      <button class="btn secondary" onclick="openScraper()">🔍 Scraper Maps</button>
+      <button class="btn" onclick="openImport()">📥 Importar</button>
       <button class="btn" onclick="openExport()">↓ Exportar</button>
       <button class="btn accent" onclick="simulate()">+ Simular lead</button>
     </div>
@@ -178,6 +191,50 @@ tbody td{padding:11px 14px;vertical-align:middle}
 <!-- MODAL DETALHE -->
 <div class="overlay" id="overlay" onclick="closeModal(event)">
   <div class="modal" id="modalBox"></div>
+</div>
+
+<!-- MODAL SCRAPER -->
+<div class="overlay" id="scraperOverlay" onclick="closeScraper(event)">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-head">
+      <div style="font-size:15px;font-weight:500">🔍 Scraper Maps</div>
+      <button class="modal-close" onclick="document.getElementById('scraperOverlay').classList.remove('open')">×</button>
+    </div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px">
+      <p style="margin-bottom:12px">Para usar o Instant Data Scraper:</p>
+      <ol style="margin-left:20px;line-height:1.8">
+        <li>Instale a extensão Instant Data Scraper no Chrome</li>
+        <li>Clique no botão abaixo para abrir Google Maps</li>
+        <li>Faça sua busca (ex: "agências de marketing em São Paulo")</li>
+        <li>Use o Instant Data Scraper para extrair os dados</li>
+        <li>Exporte como CSV ou JSON</li>
+        <li>Volte aqui e clique em "Importar"</li>
+      </ol>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn accent" onclick="openGoogleMaps()">📍 Abrir Google Maps</button>
+      <button class="btn" onclick="openInstantDataScraper()">⚙️ Instalar Extensão</button>
+      <button class="btn" onclick="document.getElementById('scraperOverlay').classList.remove('open')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL IMPORT -->
+<div class="overlay" id="importOverlay" onclick="closeImport(event)">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head">
+      <div style="font-size:15px;font-weight:500">📥 Importar Leads</div>
+      <button class="modal-close" onclick="document.getElementById('importOverlay').classList.remove('open')">×</button>
+    </div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Arraste seu arquivo CSV ou JSON aqui, ou clique para selecionar.</div>
+    <div class="import-area" id="importArea" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" onclick="document.getElementById('fileInput').click()">
+      <div style="font-size:32px;margin-bottom:8px">📄</div>
+      <div style="font-weight:500">Arraste o arquivo aqui</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">ou clique para selecionar</div>
+    </div>
+    <input type="file" id="fileInput" class="file-input" accept=".csv,.json" onchange="handleFileSelect(event)">
+    <div id="importStats" class="import-stats" style="display:none"></div>
+  </div>
 </div>
 
 <!-- MODAL EXPORT -->
@@ -335,7 +392,96 @@ function mtab(el,id){
 }
 
 function closeModal(e){if(e.target===document.getElementById('overlay'))document.getElementById('overlay').classList.remove('open');}
+function closeScraper(e){if(e.target===document.getElementById('scraperOverlay'))document.getElementById('scraperOverlay').classList.remove('open');}
+function closeImport(e){if(e.target===document.getElementById('importOverlay'))document.getElementById('importOverlay').classList.remove('open');}
 function closeExport(e){if(e.target===document.getElementById('exportOverlay'))document.getElementById('exportOverlay').classList.remove('open');}
+
+function openScraper(){document.getElementById('scraperOverlay').classList.add('open');}
+function openImport(){document.getElementById('importOverlay').classList.add('open');}
+function openExport(){const prev=filtered.slice(0,3).map(l=>({empresa:l.company,segmento:l.segment,contato:l.contact,email:l.email,score:l.score,status:l.status}));document.getElementById('payPrev').textContent=JSON.stringify(prev,null,2)+(filtered.length>3?'\n...':'');document.getElementById('exportOverlay').classList.add('open');}
+
+function openGoogleMaps(){window.open('https://maps.google.com','_blank');}
+function openInstantDataScraper(){window.open('https://chrome.google.com/webstore/detail/instant-data-scraper/ofaokhiedipichpaobibbnahnkdoiiah','_blank');}
+
+function handleDragOver(e){e.preventDefault();e.stopPropagation();document.getElementById('importArea').classList.add('drag');}
+function handleDragLeave(e){e.preventDefault();document.getElementById('importArea').classList.remove('drag');}
+function handleDrop(e){e.preventDefault();e.stopPropagation();document.getElementById('importArea').classList.remove('drag');const files=e.dataTransfer.files;if(files.length>0)processFile(files[0]);}
+function handleFileSelect(e){const files=e.target.files;if(files.length>0)processFile(files[0]);}
+
+function processFile(file){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      let data=[];
+      if(file.name.endsWith('.csv')){
+        data=parseCSV(e.target.result);
+      }else if(file.name.endsWith('.json')){
+        data=JSON.parse(e.target.result);
+        if(!Array.isArray(data))data=[data];
+      }else{
+        toast('Formato inválido. Use CSV ou JSON');return;
+      }
+      importLeads(data);
+    }catch(err){
+      toast('Erro ao processar arquivo: '+err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function parseCSV(text){
+  const lines=text.trim().split('\n');
+  const headers=lines[0].split(',').map(h=>h.trim().toLowerCase());
+  const data=[];
+  for(let i=1;i<lines.length;i++){
+    const values=lines[i].split(',').map(v=>v.trim());
+    const obj={};
+    headers.forEach((h,idx)=>{obj[h]=values[idx]||''});
+    data.push(obj);
+  }
+  return data;
+}
+
+function importLeads(data){
+  let imported=0,duplicates=0,errors=0;
+  data.forEach(item=>{
+    try{
+      const company=item.company||item.empresa||item.name||item.nome||'Sem nome';
+      const contact=item.contact||item.contato||item.person||'';
+      const email=item.email||'';
+      const phone=item.phone||item.telefone||'';
+      const city=item.city||item.cidade||'São Paulo';
+      const segment=item.segment||item.segmento||rnd(SEGS);
+      const site=item.site||item.website||'';
+      const cargo=item.cargo||item.position||'';
+      
+      if(!company||!email){errors++;return;}
+      
+      const isDuplicate=leads.some(l=>l.email===email||l.company===company);
+      if(isDuplicate){duplicates++;return;}
+      
+      const score=rndInt(45,85);
+      const newLead={
+        id:Date.now()+Math.random(),
+        company,contact,email,phone,city,segment,site,cargo,
+        score,status:'new',enriched:false,insight:'',ts:new Date()
+      };
+      leads.unshift(newLead);
+      imported++;
+      enrichOne(newLead.id,null);
+    }catch(e){errors++;}
+  });
+  
+  const stats=`<div class="success">✓ Importados: ${imported}</div>`;
+  const dupStats=duplicates>0?`<div class="warning">⚠ Duplicatas removidas: ${duplicates}</div>`:'';
+  const errStats=errors>0?`<div class="error">✗ Erros: ${errors}</div>`:'';
+  document.getElementById('importStats').innerHTML=stats+dupStats+errStats;
+  document.getElementById('importStats').style.display='block';
+  
+  render();
+  toast(`${imported} leads importados, ${duplicates} duplicatas removidas`);
+  setTimeout(()=>{document.getElementById('importOverlay').classList.remove('open')},2000);
+}
 
 function toggleWebhook(){
   whActive=!whActive;
@@ -351,12 +497,6 @@ function toggleWebhook(){
 
 function addLead(l,silent=false){leads.unshift(l);render();if(!silent)toast(`Novo lead: ${l.company}`);}
 function simulate(){const l=makeLead();addLead(l);toast(`Lead simulado: ${l.company}`);}
-
-function openExport(){
-  const prev=filtered.slice(0,3).map(l=>({empresa:l.company,segmento:l.segment,contato:l.contact,email:l.email,score:l.score,status:l.status}));
-  document.getElementById('payPrev').textContent=JSON.stringify(prev,null,2)+(filtered.length>3?'\n...':'');
-  document.getElementById('exportOverlay').classList.add('open');
-}
 
 function exportCSV(){
   const h=['Empresa','Site','Segmento','Contato','Cargo','Email','Telefone','LinkedIn','Cidade','Score','Status','Insight'];
