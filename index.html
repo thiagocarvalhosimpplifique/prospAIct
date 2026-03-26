@@ -431,50 +431,75 @@ function processFile(file){
 
 function parseCSV(text){
   const lines=text.trim().split('\n');
-  const headers=lines[0].split(',').map(h=>h.trim().toLowerCase());
+  if(lines.length<2)return[];
+  
   const data=[];
   
-  const isInstantDataScraper=headers.length>15&&headers.some(h=>h.includes('href')||h.includes('src'));
+  // Detectar se é Instant Data Scraper pelo primeiro header
+  const firstLine=lines[0];
+  const isInstantDataScraper=firstLine.includes('hfpxzc')||firstLine.includes('href')||firstLine.includes('qBF1Pd');
   
-  for(let i=1;i<lines.length;i++){
-    const line=lines[i];
-    if(!line.trim())continue;
-    
-    let values=[];
-    let inQuotes=false;
+  // Parser robusto para CSV com aspas
+  function parseCSVLine(line){
+    const result=[];
     let current='';
+    let inQuotes=false;
     
-    for(let j=0;j<line.length;j++){
-      const char=line[j];
+    for(let i=0;i<line.length;i++){
+      const char=line[i];
+      const nextChar=line[i+1];
+      
       if(char==='"'){
-        inQuotes=!inQuotes;
+        if(inQuotes&&nextChar==='"'){
+          current+='"';
+          i++;
+        }else{
+          inQuotes=!inQuotes;
+        }
       }else if(char===','&&!inQuotes){
-        values.push(current.trim().replace(/^"|"$/g,''));
+        result.push(current);
         current='';
       }else{
         current+=char;
       }
     }
-    values.push(current.trim().replace(/^"|"$/g,''));
+    result.push(current);
+    return result.map(v=>v.trim().replace(/^"|"$/g,''));
+  }
+  
+  for(let i=1;i<lines.length;i++){
+    const line=lines[i].trim();
+    if(!line)continue;
+    
+    const values=parseCSVLine(line);
+    if(values.length<2)continue;
     
     const obj={};
     
     if(isInstantDataScraper){
+      // Mapeamento correto para Instant Data Scraper
       obj.maps_url=values[0]||'';
       obj.company=values[1]||'';
       obj.rating=values[2]||'';
       obj.reviews_count=values[3]||'';
       obj.category=values[4]||'';
-      obj.address=values[6]||values[7]||'';
+      // Endereço pode estar em várias colunas
+      obj.address=values[6]||values[7]||values[8]||'';
       obj.phone=values[10]||'';
       obj.website=values[11]||'';
       obj.linkedin='';
     }else{
-      headers.forEach((h,idx)=>{obj[h]=values[idx]||''});
+      // Para CSV padrão
+      const headers=parseCSVLine(lines[0]);
+      headers.forEach((h,idx)=>{obj[h.toLowerCase()]=values[idx]||''});
     }
     
-    if(obj.company)data.push(obj);
+    // Validar se tem empresa
+    if(obj.company&&obj.company.length>0){
+      data.push(obj);
+    }
   }
+  
   return data;
 }
 
