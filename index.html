@@ -430,72 +430,93 @@ function processFile(file){
 }
 
 function parseCSV(text){
-  const lines=text.trim().split('\n');
-  if(lines.length<2)return[];
+  const lines=text.split('\n');
+  if(lines.length<4)return[];
   
   const data=[];
   
-  // Detectar se é Instant Data Scraper pelo primeiro header
-  const firstLine=lines[0];
-  const isInstantDataScraper=firstLine.includes('hfpxzc')||firstLine.includes('href')||firstLine.includes('qBF1Pd');
+  // Detectar se é Instant Data Scraper pelo padrão de headers
+  const headerLine=lines[0];
+  const isInstantDataScraper=headerLine.includes('hfpxzc')&&headerLine.includes('qBF1Pd');
   
-  // Parser robusto para CSV com aspas
-  function parseCSVLine(line){
-    const result=[];
-    let current='';
-    let inQuotes=false;
-    
-    for(let i=0;i<line.length;i++){
-      const char=line[i];
-      const nextChar=line[i+1];
-      
-      if(char==='"'){
-        if(inQuotes&&nextChar==='"'){
-          current+='"';
-          i++;
-        }else{
-          inQuotes=!inQuotes;
-        }
-      }else if(char===','&&!inQuotes){
-        result.push(current);
-        current='';
-      }else{
-        current+=char;
-      }
-    }
-    result.push(current);
-    return result.map(v=>v.trim().replace(/^"|"$/g,''));
+  if(!isInstantDataScraper){
+    // Processar como CSV padrão
+    return parseStandardCSV(text);
   }
+  
+  // Parser para Instant Data Scraper
+  // Pular 2 linhas vazias após o header
+  const startRow=3;
+  
+  for(let i=startRow;i<lines.length;i++){
+    const line=lines[i].trim();
+    if(!line)continue;
+    
+    const values=parseCSVLine(line);
+    if(values.length<12)continue; // Precisa ter pelo menos 12 colunas
+    
+    const company=values[1]?.trim()||'';
+    if(!company)continue; // Pular se não tem empresa
+    
+    const obj={
+      maps_url: values[0]?.trim()||'',
+      company: company,
+      rating: values[2]?.trim()||'',
+      reviews_count: values[3]?.trim()||'',
+      category: values[4]?.trim()||'',
+      address: (values[6]?.trim()||'')+(values[9]?.trim()?' '+values[9].trim():''),
+      phone: values[10]?.trim()||'',
+      website: values[11]?.trim()||'',
+      linkedin: ''
+    };
+    
+    data.push(obj);
+  }
+  
+  return data;
+}
+
+function parseCSVLine(line){
+  const result=[];
+  let current='';
+  let inQuotes=false;
+  
+  for(let i=0;i<line.length;i++){
+    const char=line[i];
+    const nextChar=line[i+1];
+    
+    if(char==='"'){
+      if(inQuotes&&nextChar==='"'){
+        current+='"';
+        i++;
+      }else{
+        inQuotes=!inQuotes;
+      }
+    }else if(char===','&&!inQuotes){
+      result.push(current);
+      current='';
+    }else{
+      current+=char;
+    }
+  }
+  result.push(current);
+  return result.map(v=>v.replace(/^"|"$/g,''));
+}
+
+function parseStandardCSV(text){
+  const lines=text.split('\n');
+  const data=[];
+  const headers=parseCSVLine(lines[0]).map(h=>h.toLowerCase());
   
   for(let i=1;i<lines.length;i++){
     const line=lines[i].trim();
     if(!line)continue;
     
     const values=parseCSVLine(line);
-    if(values.length<2)continue;
-    
     const obj={};
+    headers.forEach((h,idx)=>{obj[h]=values[idx]||''});
     
-    if(isInstantDataScraper){
-      // Mapeamento correto para Instant Data Scraper
-      obj.maps_url=values[0]||'';
-      obj.company=values[1]||'';
-      obj.rating=values[2]||'';
-      obj.reviews_count=values[3]||'';
-      obj.category=values[4]||'';
-      // Endereço pode estar em várias colunas
-      obj.address=values[6]||values[7]||values[8]||'';
-      obj.phone=values[10]||'';
-      obj.website=values[11]||'';
-      obj.linkedin='';
-    }else{
-      // Para CSV padrão
-      const headers=parseCSVLine(lines[0]);
-      headers.forEach((h,idx)=>{obj[h.toLowerCase()]=values[idx]||''});
-    }
-    
-    // Validar se tem empresa
-    if(obj.company&&obj.company.length>0){
+    if(obj.company||obj.empresa||obj.name){
       data.push(obj);
     }
   }
