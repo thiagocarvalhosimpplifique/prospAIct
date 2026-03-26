@@ -232,7 +232,9 @@ tbody td{padding:11px 14px;vertical-align:middle}
       <div style="font-weight:500">Arraste o arquivo aqui</div>
       <div style="font-size:12px;color:var(--muted);margin-top:4px">ou clique para selecionar</div>
     </div>
-    <input type="file" id="fileInput" class="file-input" accept=".csv,.json" onchange="handleFileSelect(event)">
+    <input type="file" id="fileInput" class="file-input" accept=".csv,.json,.xlsx" onchange="handleFileSelect(event)">
+    <textarea id="pasteArea" placeholder="Ou cole aqui os dados copiados do Instant Data Scraper..." style="width:100%;height:100px;padding:10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-family:var(--mono);font-size:12px;margin-top:12px;resize:vertical"></textarea>
+    <button class="btn accent" onclick="handlePaste()" style="width:100%;margin-top:8px">Colar dados</button>
     <div id="importStats" class="import-stats" style="display:none"></div>
   </div>
 </div>
@@ -418,15 +420,147 @@ function processFile(file){
       }else if(file.name.endsWith('.json')){
         data=JSON.parse(e.target.result);
         if(!Array.isArray(data))data=[data];
+      }else if(file.name.endsWith('.xlsx')){
+        parseXLSX(e.target.result,function(parsedData){
+          importLeads(parsedData);
+        });
+        return;
       }else{
-        toast('Formato inválido. Use CSV ou JSON');return;
+        toast('Formato inválido. Use CSV, JSON ou XLSX');return;
       }
       importLeads(data);
     }catch(err){
       toast('Erro ao processar arquivo: '+err.message);
     }
   };
-  reader.readAsText(file);
+  if(file.name.endsWith('.xlsx')){
+    reader.readAsArrayBuffer(file);
+  }else{
+    reader.readAsText(file);
+  }
+}
+
+function handlePaste(){
+  const text=document.getElementById('pasteArea').value.trim();
+  if(!text){
+    toast('Cole os dados primeiro');
+    return;
+  }
+  try{
+    const data=parseTabSeparatedData(text);
+    importLeads(data);
+    document.getElementById('pasteArea').value='';
+  }catch(err){
+    toast('Erro ao processar dados: '+err.message);
+  }
+}
+
+function parseTabSeparatedData(text){
+  const lines=text.split('\n').filter(l=>l.trim());
+  if(lines.length<1)return[];
+  
+  const data=[];
+  const headers=lines[0].split('\t').map(h=>h.trim().toLowerCase());
+  
+  for(let i=1;i<lines.length;i++){
+    const values=lines[i].split('\t').map(v=>v.trim());
+    if(values.length<2)continue;
+    
+    const obj={};
+    headers.forEach((h,idx)=>{
+      obj[h]=values[idx]||'';
+    });
+    
+    // Mapear para o formato esperado
+    const lead={
+      maps_url: obj['hfpxzc href']||obj['url']||obj['maps_url']||'',
+      company: obj['qbf1pd']||obj['company']||obj['empresa']||obj['name']||obj['nome']||'',
+      rating: obj['mw4etd']||obj['rating']||obj['avaliação']||'',
+      reviews_count: obj['uy7f9']||obj['reviews']||obj['reviews_count']||'',
+      category: obj['w4efsd']||obj['category']||obj['categoria']||obj['segment']||'',
+      address: obj['w4efsd 3']||obj['address']||obj['endereço']||'',
+      phone: obj['usdlk']||obj['phone']||obj['telefone']||'',
+      website: obj['lcr4fd href']||obj['website']||obj['site']||obj['url']||'',
+      linkedin: obj['linkedin']||''
+    };
+    
+    if(lead.company){
+      data.push(lead);
+    }
+  }
+  
+  return data;
+}
+
+function parseXLSX(arrayBuffer,callback){
+  // Usar SheetJS (https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js)
+  if(typeof XLSX==='undefined'){
+    // Carregar SheetJS dinamicamente
+    const script=document.createElement('script');
+    script.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js';
+    script.onload=function(){
+      performXLSXParse(arrayBuffer,callback);
+    };
+    document.head.appendChild(script);
+  }else{
+    performXLSXParse(arrayBuffer,callback);
+  }
+}
+
+function performXLSXParse(arrayBuffer,callback){
+  try{
+    const workbook=XLSX.read(arrayBuffer,{type:'array'});
+    const sheet=workbook.Sheets[workbook.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(sheet,{header:1});
+    
+    if(rows.length<2){
+      toast('Arquivo XLSX vazio');
+      return;
+    }
+    
+    const data=[];
+    const headers=rows[0].map(h=>(h||'').toString().toLowerCase());
+    
+    // Pular linhas vazias
+    let startRow=1;
+    for(let i=1;i<Math.min(5,rows.length);i++){
+      if(rows[i].some(v=>v)){
+        startRow=i;
+        break;
+      }
+    }
+    
+    for(let i=startRow;i<rows.length;i++){
+      const values=rows[i];
+      if(!values.some(v=>v))continue; // Pular linhas vazias
+      
+      const obj={};
+      headers.forEach((h,idx)=>{
+        obj[h]=(values[idx]||'').toString().trim();
+      });
+      
+      // Mapear para o formato esperado
+      const lead={
+        maps_url: obj['hfpxzc href']||obj['url']||obj['maps_url']||'',
+        company: obj['qbf1pd']||obj['company']||obj['empresa']||obj['name']||obj['nome']||'',
+        rating: obj['mw4etd']||obj['rating']||obj['avaliação']||'',
+        reviews_count: obj['uy7f9']||obj['reviews']||obj['reviews_count']||'',
+        category: obj['w4efsd']||obj['category']||obj['categoria']||obj['segment']||'',
+        address: obj['w4efsd 3']||obj['address']||obj['endereço']||'',
+        phone: obj['usdlk']||obj['phone']||obj['telefone']||'',
+        website: obj['lcr4fd href']||obj['website']||obj['site']||obj['url']||'',
+        linkedin: obj['linkedin']||''
+      };
+      
+      if(lead.company){
+        data.push(lead);
+      }
+    }
+    
+    callback(data);
+  }catch(err){
+    toast('Erro ao processar XLSX: '+err.message);
+  }
 }
 
 function parseCSV(text){
