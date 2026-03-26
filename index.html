@@ -259,7 +259,7 @@ tbody td{padding:11px 14px;vertical-align:middle}
 <script>
 const COLORS=[['#1e3a5f','#5ba4f5'],['#1e3a2f','#3ecf8e'],['#3a1e3a','#c084fc'],['#3a2a1e','#fb923c'],['#1e3040','#67e8f9'],['#2d1e3a','#f0abfc']];
 const SEGS=['SaaS','E-commerce','Fintech','Saúde','Educação','Alimentação','Logística','Beleza','Serviços'];
-const CITIES=['São Paulo','Campinas','Santo André','São Bernardo','Guarulhos','Curitiba','Florianópolis','Porto Alegre'];
+const CITIES=['São Paulo','Campinas','Santo André','São Bernardo','Guarulhos','Curitiba','Florianópolis','Porto Alegre','Buenos Aires','Recoleta','Microcentro','Once','Puerto Madero','Barrio Norte','Parque Patricios'];
 const CARGOS=['CEO','CMO','CTO','Diretor Comercial','Head de Marketing','Gerente de Vendas','Sócio-fundador'];
 const CONTACTS=['Ana Lima','Carlos Souza','Beatriz Faria','João Mendes','Fernanda Costa','Ricardo Alves','Patrícia Nunes','Lucas Brito','Mariana Santos','Diego Rocha'];
 const COMPANIES=['NovaTech','Ágil Log','DataFlow','MedLink','EduSpark','Sabor & Arte','QuickFreight','BeautyPro','ConnectServ','FinanceX','RotinaSaúde','OfertaHub'];
@@ -433,38 +433,108 @@ function parseCSV(text){
   const lines=text.trim().split('\n');
   const headers=lines[0].split(',').map(h=>h.trim().toLowerCase());
   const data=[];
+  
+  const isInstantDataScraper=headers.length>15&&headers.some(h=>h.includes('href')||h.includes('src'));
+  
   for(let i=1;i<lines.length;i++){
-    const values=lines[i].split(',').map(v=>v.trim());
+    const line=lines[i];
+    if(!line.trim())continue;
+    
+    let values=[];
+    let inQuotes=false;
+    let current='';
+    
+    for(let j=0;j<line.length;j++){
+      const char=line[j];
+      if(char==='"'){
+        inQuotes=!inQuotes;
+      }else if(char===','&&!inQuotes){
+        values.push(current.trim().replace(/^"|"$/g,''));
+        current='';
+      }else{
+        current+=char;
+      }
+    }
+    values.push(current.trim().replace(/^"|"$/g,''));
+    
     const obj={};
-    headers.forEach((h,idx)=>{obj[h]=values[idx]||''});
-    data.push(obj);
+    
+    if(isInstantDataScraper){
+      obj.maps_url=values[0]||'';
+      obj.company=values[1]||'';
+      obj.rating=values[2]||'';
+      obj.reviews_count=values[3]||'';
+      obj.category=values[4]||'';
+      obj.address=values[6]||values[7]||'';
+      obj.phone=values[10]||'';
+      obj.website=values[11]||'';
+      obj.linkedin='';
+    }else{
+      headers.forEach((h,idx)=>{obj[h]=values[idx]||''});
+    }
+    
+    if(obj.company)data.push(obj);
   }
   return data;
 }
 
+function extractCity(addr){
+  if(!addr)return 'São Paulo';
+  const pts=addr.split(',');
+  return pts[pts.length-1]?.trim()||'São Paulo';
+}
+
+function scoreFromRating(r){
+  if(!r)return rndInt(45,85);
+  const val=parseFloat(r.replace(',','.'));
+  return Math.min(95,Math.max(30,Math.round(val*15)));
+}
+
+function mapCategory(c){
+  if(!c)return rnd(SEGS);
+  const cat=c.toLowerCase();
+  if(cat.includes('cambio')||cat.includes('bank')||cat.includes('finance')||cat.includes('agencia'))return'Fintech';
+  if(cat.includes('saude')||cat.includes('health')||cat.includes('medic')||cat.includes('clinica'))return'Saúde';
+  if(cat.includes('educacao')||cat.includes('school')||cat.includes('cursos')||cat.includes('turismo'))return'Educação';
+  if(cat.includes('comercio')||cat.includes('loja')||cat.includes('shop')||cat.includes('varejo'))return'E-commerce';
+  if(cat.includes('logistica')||cat.includes('transport')||cat.includes('frete')||cat.includes('entrega'))return'Logística';
+  if(cat.includes('beleza')||cat.includes('beauty')||cat.includes('salao')||cat.includes('estetica'))return'Beleza';
+  if(cat.includes('aliment')||cat.includes('restaur')||cat.includes('food')||cat.includes('cafe'))return'Alimentação';
+  return rnd(SEGS);
+}
+
 function importLeads(data){
   let imported=0,duplicates=0,errors=0;
+  
   data.forEach(item=>{
     try{
-      const company=item.company||item.empresa||item.name||item.nome||'Sem nome';
+      const company=item.company||item.empresa||item.name||item.nome||'';
       const contact=item.contact||item.contato||item.person||'';
-      const email=item.email||'';
-      const phone=item.phone||item.telefone||'';
-      const city=item.city||item.cidade||'São Paulo';
-      const segment=item.segment||item.segmento||rnd(SEGS);
-      const site=item.site||item.website||'';
+      const email=item.email||item.contact_email||'';
+      const phone=item.phone||item.telefone||item.phone_number||'';
+      const address=item.address||item.endereco||'';
+      const city=item.city||item.cidade||extractCity(address);
+      const segment=item.segment||item.segmento||item.category||mapCategory(item.category);
+      const site=item.site||item.website||item.url||item.maps_url||'';
       const cargo=item.cargo||item.position||'';
+      const rating=item.rating||'';
       
-      if(!company||!email){errors++;return;}
+      if(!company){errors++;return;}
       
-      const isDuplicate=leads.some(l=>l.email===email||l.company===company);
+      const isDuplicate=leads.some(l=>
+        l.company.toLowerCase()===company.toLowerCase()||
+        (email&&l.email===email)||
+        (phone&&l.phone===phone)
+      );
       if(isDuplicate){duplicates++;return;}
       
-      const score=rndInt(45,85);
+      const score=scoreFromRating(rating);
+      const status=score>=70?'hot':score>=50?'warm':'cold';
+      
       const newLead={
         id:Date.now()+Math.random(),
         company,contact,email,phone,city,segment,site,cargo,
-        score,status:'new',enriched:false,insight:'',ts:new Date()
+        score,status,enriched:false,insight:'',ts:new Date()
       };
       leads.unshift(newLead);
       imported++;
